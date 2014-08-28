@@ -1,5 +1,10 @@
 package net;
 
+/*
+Object Oriented Programmingnya masih kurang bagus.
+Penambahan file atau secara horizontal lebih baik dibanding penambahan baris secara vertikal.
+Manfaatkan fitur yang ada di OOP: encapsulation, inheritance, and polimorphism
+*/
 public class Net {
 
     static double learningrate = 0.25;
