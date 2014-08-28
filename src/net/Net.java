@@ -1,41 +1,63 @@
+
 package net;
 
-/*
-Object Oriented Programmingnya masih kurang bagus.
-Penambahan file atau secara horizontal lebih baik dibanding penambahan baris secara vertikal.
-Manfaatkan fitur yang ada di OOP: encapsulation, inheritance, and polimorphism
-*/
 public class Net {
 
-    static double learningrate = 0.25;
-    static double momentum = 0.5;
+    public static double learningrate = 0.25;
+    public static double momentum = 0.5;
+    
     private Layer[] m_layer;
     private double m_error;
     public double sum_global_error;
 
     public Net() {
+        
     }
 
     public void setTopology(int[] topology) {
         int numLayers = topology.length;
+        if(numLayers < 3){
+            System.out.println("minimal 3 layer : input, hidden, output");
+            return;
+        }
+
         this.m_layer = new Layer[numLayers];
-
-        for (int layerNum = 0; layerNum < numLayers; layerNum++) {
-            this.m_layer[layerNum] = new Layer();
-
+        
+        // Inisialisasi neuron dan bias untuk input layer
+        this.m_layer[0] = new Layer(new NeuronInput[topology[0] + 1]);
+        
+        int numOutput = topology[1];
+        for (int neuronNum = 0; neuronNum <= topology[0]; neuronNum++) {
+            this.m_layer[0].neuron[neuronNum] = new NeuronInput(numOutput, neuronNum);
+        }
+        
+        // neuron terakhir berperan sebagai bias, isi output = 1
+        this.m_layer[0].neuron[topology[0]].setOutputVal(1);
+        
+        // Inisialisasi hidden layer
+        for (int layerNum = 1; layerNum < numLayers - 1; layerNum++) {
+            
             // Buat neuron dan bias untuk setiap layer
-            this.m_layer[layerNum].neuron = new Neuron[topology[layerNum] + 1];
+            this.m_layer[layerNum] = new Layer(new NeuronHidden[topology[layerNum] + 1]);
 
-            int numOutput = (layerNum == numLayers - 1) ? 0 : topology[layerNum + 1];
+            numOutput = topology[layerNum + 1];
 
             for (int neuronNum = 0; neuronNum <= topology[layerNum]; neuronNum++) {
-                this.m_layer[layerNum].neuron[neuronNum] = new Neuron(numOutput, neuronNum);
+                this.m_layer[layerNum].neuron[neuronNum] = new NeuronHidden(numOutput, neuronNum);
             }
 
             //neuron terakhir berperan sebagai bias, isi output = 1
             this.m_layer[layerNum].neuron[topology[layerNum]].setOutputVal(1);
         }
-
+        
+        // Inisialisasi output layer
+        // Inisialisasi neuron dan bias untuk input layer
+        this.m_layer[numLayers - 1] = new Layer(new NeuronOutput[topology[numLayers - 1] + 1]);
+        
+        for (int neuronNum = 0; neuronNum <= topology[numLayers - 1]; neuronNum++) {
+            this.m_layer[numLayers - 1].neuron[neuronNum] = new NeuronOutput(neuronNum);
+        }
+        this.m_layer[numLayers - 1].neuron[topology[numLayers - 1]].setOutputVal(1);
     }
 
     public void backProp(double[] targetVal) {
@@ -44,7 +66,7 @@ public class Net {
             return;
         }
 
-        int outputNum = this.m_layer[this.m_layer.length - 1].neuron.length - 1;
+        int outputNum = this.m_layer[this.m_layer.length - 1].getJumlahNeuron() - 1;
 
         if (targetVal.length != outputNum) {
             System.out.println("banyak target tidak sama dengan banyak neuron di output layer");
@@ -64,7 +86,7 @@ public class Net {
 
         //hitung galat output layer
         for (int i = 0; i < outputNum; i++) {
-            this.m_layer[this.m_layer.length - 1].neuron[i].hitungGalatOutput(targetVal[i]);
+            this.m_layer[this.m_layer.length - 1].neuron[i].hitungGalat(targetVal[i]);
         }
 
         //hitung galat hidden layer
@@ -72,7 +94,7 @@ public class Net {
             Layer layerSelanjutnya = this.m_layer[layerNum + 1];
 
             for (int i = 0; i < this.m_layer[layerNum].neuron.length; i++) {
-                this.m_layer[layerNum].neuron[i].hitungGalatHidden(layerSelanjutnya);
+                this.m_layer[layerNum].neuron[i].hitungGalat(layerSelanjutnya);
             }
         }
 
@@ -127,185 +149,5 @@ public class Net {
 
         }
         return hasil;
-    }
-
-    class Layer {
-
-        public Neuron[] neuron;
-    }
-
-    class Connection {
-
-        private double weight;
-        private double deltaweight;
-
-        public double getWeight() {
-            return weight;
-        }
-
-        public void setWeight(double weight) {
-            this.weight = weight;
-        }
-
-        public double getDeltaweight() {
-            return deltaweight;
-        }
-
-        public void setDeltaweight(double deltaweight) {
-            this.deltaweight = deltaweight;
-        }
-    }
-
-    class Neuron {
-
-        private Connection[] m_outputWeights;
-        private double m_outputVal;
-        private int m_myIndex;
-        private double m_galat;
-
-        public Neuron() {
-        }
-
-        public Neuron(int numOutput, int myIndex) {
-            this.m_outputWeights = new Connection[numOutput];
-            for (int i = 0; i < numOutput; i++) {
-                this.m_outputWeights[i] = new Connection();
-                this.m_outputWeights[i].setWeight(this.weightAcak());
-            }
-            this.m_myIndex = myIndex;
-        }
-
-        public void updateWeight(double galat, int i) {
-
-            double deltaWeightDulu = this.m_outputWeights[i].getDeltaweight();
-
-            double deltaWeightBaru =
-                    Net.learningrate
-                    * this.getOutputVal()
-                    * galat
-                    + Net.momentum
-                    * deltaWeightDulu;
-
-            this.m_outputWeights[i].setDeltaweight(deltaWeightBaru);
-            deltaWeightBaru += this.m_outputWeights[i].getWeight();
-            this.m_outputWeights[i].setWeight(deltaWeightBaru);
-
-
-        }
-
-        public void hitungGalatHidden(Layer layerSelanjutnya) {
-            double sum = 0.0;
-
-            for (int i = 0; i < layerSelanjutnya.neuron.length - 1; i++) {
-                sum += this.m_outputWeights[i].getWeight()
-                        * layerSelanjutnya.neuron[i].getGalat();
-            }
-
-            this.m_galat = sum * this.transferFunctionTurunan(this.getOutputVal());
-        }
-
-        public void hitungGalatOutput(double targetVal) {
-            double delta = targetVal - this.getOutputVal();
-            this.m_galat = delta * this.transferFunctionTurunan(this.m_outputVal);
-        }
-
-        public void feedForward(Layer layerSebelumnya) {
-            double sum = 0.0;
-
-            for (int i = 0; i < layerSebelumnya.neuron.length; i++) {
-                sum += layerSebelumnya.neuron[i].getOutputVal()
-                        * layerSebelumnya.neuron[i].getOutputWeight(this.m_myIndex).getWeight();
-            }
-
-            this.m_outputVal = transferFunction(sum);
-        }
-
-        private double transferFunction(double x) {
-            //sigmoid
-            return 1 / (1 + Math.exp(-1 * x));
-        }
-
-        private double transferFunctionTurunan(double x) {
-            //turunan sigmoid
-            return this.transferFunction(x) * (1 - this.transferFunction(x));
-        }
-
-        private double weightAcak() {
-            //nilai acak [-1 sampai 1]
-            return Math.round(Math.random()) * 2 - 1;
-        }
-
-        public double getOutputVal() {
-            return this.m_outputVal;
-        }
-
-        public void setOutputVal(double m_outputVal) {
-            this.m_outputVal = m_outputVal;
-        }
-
-        public double getGalat() {
-            return this.m_galat;
-        }
-
-        public Connection getOutputWeight(int index) {
-            return this.m_outputWeights[index];
-        }
-    }
-
-    public static void main(String[] args) {
-        // TODO code application logic here
-        Net net = new Net();
-        int[] topology = new int[3];
-        topology[0] = 2;
-        topology[1] = 4;
-        topology[2] = 1;
-        //System.out.println(topology.length);
-        net.setTopology(topology);
-
-        double[][] input = new double[4][2];
-        double[][] target = new double[4][1];
-
-        input[0][0] = 0.0;
-        input[0][1] = 0.0;
-        target[0][0] = 0.0;
-
-        input[1][0] = 0.0;
-        input[1][1] = 1.0;
-        target[1][0] = 1.0;
-
-        input[2][0] = 1.0;
-        input[2][1] = 0.0;
-        target[2][0] = 1.0;
-
-        input[3][0] = 1.0;
-        input[3][1] = 1.0;
-        target[3][0] = 1.0;
-
-        double error = 0.0;
-        int epoc = 0;
-        do {
-            net.sum_global_error = 0.0;
-
-            for (int i = 0; i < 4; i++) {
-                net.feedForward(input[i]);
-                net.backProp(target[i]);
-            }
-            error = Math.sqrt(net.sum_global_error / (4 * topology[topology.length - 1]));
-            epoc++;
-            if(epoc % 100 == 0){
-                System.out.println("learning masih proses di epoc " + epoc + ". dengan error " + error);
-            }
-
-        } while ( error > 0.01 );
-        
-        System.out.println("learning berhenti di epoc " + epoc + ". dengan error " + error);
-        
-        System.out.println("\npercobaan :");
-        double[] hasil;
-        for (int i = 0; i < 4; i++) {
-            net.feedForward(input[i]);
-            hasil = net.getHasil();
-            System.out.println( input[i][0] + " or "+input[i][1]+" = " + hasil[0]);
-        }        
     }
 }
