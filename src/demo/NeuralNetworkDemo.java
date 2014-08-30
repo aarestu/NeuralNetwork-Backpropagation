@@ -1,4 +1,18 @@
-
+/*
+ * Copyright 2014 aarestu.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package demo;
 
 import net.Net;
@@ -16,7 +30,7 @@ public class NeuralNetworkDemo {
                
         int[] topology = new int[3];
         topology[0] = 2;
-        topology[1] = 5;
+        topology[1] = 4;
         topology[2] = 1;
         
         net.setTopology(topology);
@@ -42,8 +56,8 @@ public class NeuralNetworkDemo {
 
         //update parameter
         TransferFunction.TRANSFER_FUNCTION = TransferFunction.TRANSFER_FUNCTION_TANH;
-        Net.learningrate    = 0.3;
-        Net.momentum        = 0.7;
+        Net.learningrate    = 0.25;
+        Net.momentum        = 0.5;
         
         double error = 0.0;
         int epoc = 0;

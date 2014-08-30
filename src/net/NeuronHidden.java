@@ -1,3 +1,18 @@
+/*
+ * Copyright 2014 aarestu.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package net;
 
@@ -7,38 +22,19 @@ package net;
  */
 public class NeuronHidden extends Neuron {
     
-    protected double m_galat;
-    protected Connection[] m_outputWeights;
     
     public NeuronHidden(int numOutput, int myIndex) {
-        super(myIndex);
-        
-        this.m_outputWeights = new Connection[numOutput];
-        for (int i = 0; i < numOutput; i++) {
-            this.m_outputWeights[i] = new Connection();
-            this.m_outputWeights[i].setWeight(Neuron.weightAcak());
-        }
+        super(numOutput, myIndex);
     }
     
-    @Override
     public void hitungGalat(Layer layerSelanjutnya) {
         double sum = 0.0;
 
-        for (int i = 0; i < layerSelanjutnya.getJumlahNeuron() - 1; i++) {
-            sum += this.m_outputWeights[i].getWeight()
-                    * layerSelanjutnya.neuron[i].getGalat();
+        for (int i = 0; i < layerSelanjutnya.getSizeNeuron() - 1; i++) {
+            sum += this.outputWeights[i].getWeight()
+                    * layerSelanjutnya.getIndexNeuron(i).getGalat();
         }
 
-        this.m_galat = sum * TransferFunction.transferTurunan(this.getOutputVal());
-    }
-    
-    @Override
-    public Connection getOutputWeight(int index) {
-        return this.m_outputWeights[index];
-    }
-    
-    @Override
-    public double getGalat() {
-        return this.m_galat;
+        this.galat = sum * TransferFunction.transferTurunan(this.getOutputVal());
     }
 }

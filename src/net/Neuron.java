@@ -1,3 +1,18 @@
+/*
+ * Copyright 2014 aarestu.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package net;
 
@@ -7,43 +22,46 @@ package net;
  */
 public class Neuron {
 
-    protected double m_outputVal;
-    protected int m_myIndex;
+    protected int myIndex;
+    protected double outputVal;
+    protected Connection[] outputWeights;
+    protected double galat;
 
-    public Neuron(int myIndex) {
-        this.m_myIndex = myIndex;
+    public Neuron(int myIndex){
+        this.myIndex = myIndex;
+    }
+    
+    public Neuron(int numOutput, int myIndex) {
+        //inisialisasi koneksi neuron
+        this.outputWeights = new Connection[numOutput];
+        for (int i = 0; i < numOutput; i++) {
+            this.outputWeights[i] = new Connection();
+            this.outputWeights[i].setWeight(Neuron.weightAcak());
+        }
+        
+        this.myIndex = myIndex;
     }
 
-    public void updateWeight(double galat, int i) {
-
-        double deltaWeightDulu = this.getOutputWeight(i).getDeltaweight();
-
-        double deltaWeightBaru =
+    public void updateWeight(Layer layerSebelumnya) {
+        
+        for(Neuron neuron : layerSebelumnya.getNeurons()){
+            Connection weight = neuron.getOutputWeight(myIndex);
+            
+            double deltaWeightBaru =
                 Net.learningrate
-                * this.getOutputVal()
-                * galat
+                * neuron.getOutputVal()
+                * this.galat
                 + Net.momentum
-                * deltaWeightDulu;
-
-        this.getOutputWeight(i).setDeltaweight(deltaWeightBaru);
-        deltaWeightBaru += this.getOutputWeight(i).getWeight();
-        this.getOutputWeight(i).setWeight(deltaWeightBaru);
-
-
+                * weight.getDeltaweight();
+            
+            weight.setDeltaweight(deltaWeightBaru);
+            weight.setWeight(weight.getWeight() + deltaWeightBaru);
+        }
     }
-
-    public void hitungGalat(Layer layerSelanjutnya){}
-    public void hitungGalat(double targetVal) {}
 
     public void feedForward(Layer layerSebelumnya) {
-        double sum = 0.0;
-
-        for (int i = 0; i < layerSebelumnya.getJumlahNeuron(); i++) {
-            sum += layerSebelumnya.neuron[i].getOutputVal()
-                    * layerSebelumnya.neuron[i].getOutputWeight(this.m_myIndex).getWeight();
-        }
-
-        this.m_outputVal = TransferFunction.transfer(sum);
+        double sum = layerSebelumnya.getSumInput(myIndex);
+        this.outputVal = TransferFunction.transfer(sum);
     }
 
     protected static double weightAcak() {
@@ -52,18 +70,18 @@ public class Neuron {
     }
 
     public double getOutputVal() {
-        return this.m_outputVal;
+        return this.outputVal;
     }
 
-    public void setOutputVal(double m_outputVal) {
-        this.m_outputVal = m_outputVal;
+    public void setOutputVal(double outputVal) {
+        this.outputVal = outputVal;
     }
 
     public double getGalat() {
-        return -1;
+        return this.galat;
     }
 
     public Connection getOutputWeight(int index) {
-        return null;
+        return this.outputWeights[index];
     }
 }

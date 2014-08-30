@@ -1,151 +1,175 @@
+/*
+ * Copyright 2014 aarestu.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package net;
 
+/**
+ *
+ * @author aarestu
+ */
 public class Net {
 
     public static double learningrate = 0.25;
     public static double momentum = 0.5;
-    
-    private Layer[] m_layer;
-    private double m_error;
+    private Layer[] layers;
+    private double myError;
     public double sum_global_error;
 
     public Net() {
-        
     }
 
     public void setTopology(int[] topology) {
         int numLayers = topology.length;
-        if(numLayers < 3){
+        if (numLayers < 3) {
             System.out.println("minimal 3 layer : input, hidden, output");
             return;
         }
 
-        this.m_layer = new Layer[numLayers];
-        
+        this.layers = new Layer[numLayers];
+
         // Inisialisasi neuron dan bias untuk input layer
-        this.m_layer[0] = new Layer(new NeuronInput[topology[0] + 1]);
-        
+        Neuron[] inputNeuron = new Neuron[topology[0] + 1];
         int numOutput = topology[1];
+
         for (int neuronNum = 0; neuronNum <= topology[0]; neuronNum++) {
-            this.m_layer[0].neuron[neuronNum] = new NeuronInput(numOutput, neuronNum);
+            inputNeuron[neuronNum] = new Neuron(numOutput, neuronNum);
         }
-        
+
+        this.layers[0] = new Layer(inputNeuron);
+
         // neuron terakhir berperan sebagai bias, isi output = 1
-        this.m_layer[0].neuron[topology[0]].setOutputVal(1);
-        
+        this.layers[0].getIndexNeuron(topology[0]).setOutputVal(1);
+
         // Inisialisasi hidden layer
         for (int layerNum = 1; layerNum < numLayers - 1; layerNum++) {
-            
-            // Buat neuron dan bias untuk setiap layer
-            this.m_layer[layerNum] = new Layer(new NeuronHidden[topology[layerNum] + 1]);
 
+            // Buat neuron dan bias untuk setiap layer
+            NeuronHidden[] hiddenNeuron = new NeuronHidden[topology[layerNum] + 1];
             numOutput = topology[layerNum + 1];
 
             for (int neuronNum = 0; neuronNum <= topology[layerNum]; neuronNum++) {
-                this.m_layer[layerNum].neuron[neuronNum] = new NeuronHidden(numOutput, neuronNum);
+                hiddenNeuron[neuronNum] = new NeuronHidden(numOutput, neuronNum);
             }
 
+            this.layers[layerNum] = new Layer(hiddenNeuron);
             //neuron terakhir berperan sebagai bias, isi output = 1
-            this.m_layer[layerNum].neuron[topology[layerNum]].setOutputVal(1);
+            this.layers[layerNum].getIndexNeuron(topology[layerNum]).setOutputVal(1);
         }
-        
+
         // Inisialisasi output layer
-        // Inisialisasi neuron dan bias untuk input layer
-        this.m_layer[numLayers - 1] = new Layer(new NeuronOutput[topology[numLayers - 1] + 1]);
-        
+        NeuronOutput[] outputNeuron = new NeuronOutput[topology[numLayers - 1] + 1];
+
         for (int neuronNum = 0; neuronNum <= topology[numLayers - 1]; neuronNum++) {
-            this.m_layer[numLayers - 1].neuron[neuronNum] = new NeuronOutput(neuronNum);
+            outputNeuron[neuronNum] = new NeuronOutput(neuronNum);
         }
-        this.m_layer[numLayers - 1].neuron[topology[numLayers - 1]].setOutputVal(1);
+
+        this.layers[numLayers - 1] = new Layer(outputNeuron);
+        
     }
 
     public void backProp(double[] targetVal) {
-        if (this.m_layer == null || this.m_layer.length < 2) {
+        if (this.layers == null || this.layers.length < 3) {
             System.out.println("Arsitektur NN belum terbentuk dengan benar");
             return;
         }
 
-        int outputNum = this.m_layer[this.m_layer.length - 1].getJumlahNeuron() - 1;
+        int outputNum = this.layers[this.layers.length - 1].getSizeNeuron() - 1;
 
         if (targetVal.length != outputNum) {
             System.out.println("banyak target tidak sama dengan banyak neuron di output layer");
             return;
         }
 
-        //hitung error local
-        this.m_error = 0.0;
-        for (int i = 0; i < outputNum; i++) {
-            double delta = targetVal[i]
-                    - this.m_layer[this.m_layer.length - 1].neuron[i].getOutputVal();
-            this.m_error = delta * delta;
-            this.sum_global_error += this.m_error;
-        }
-        this.m_error = this.m_error / outputNum; // Mean Squared Error (MSE)
-        this.m_error = Math.sqrt(this.m_error); // RMS
 
-        //hitung galat output layer
+        this.myError = 0.0;
         for (int i = 0; i < outputNum; i++) {
-            this.m_layer[this.m_layer.length - 1].neuron[i].hitungGalat(targetVal[i]);
+
+            NeuronOutput no = (NeuronOutput) this.layers[this.layers.length - 1].getIndexNeuron(i);
+            no.setTarget(targetVal[i]);
+
+            //hitung error local
+            double delta = no.getOutputError();
+            this.myError += delta * delta;
+            this.sum_global_error += this.myError;
+
+            //hitung galat output layer
+            no.hitungGalat();
         }
+
+        //hitung error local
+        this.myError = this.myError / outputNum; // Mean Squared Error (MSE)
+        this.myError = Math.sqrt(this.myError); // RMS
 
         //hitung galat hidden layer
-        for (int layerNum = this.m_layer.length - 2; layerNum >= 0; layerNum--) {
-            Layer layerSelanjutnya = this.m_layer[layerNum + 1];
+        for (int layerNum = this.layers.length - 2; layerNum > 0; layerNum--) {
+            Layer hiddenLayer = this.layers[layerNum];
+            Layer layerSelanjutnya = this.layers[layerNum + 1];
 
-            for (int i = 0; i < this.m_layer[layerNum].neuron.length; i++) {
-                this.m_layer[layerNum].neuron[i].hitungGalat(layerSelanjutnya);
+            for (int i = 0; i < hiddenLayer.getSizeNeuron(); i++) {
+                NeuronHidden nh = (NeuronHidden) hiddenLayer.getIndexNeuron(i);
+                nh.hitungGalat(layerSelanjutnya);
             }
         }
 
-        //update bobot koneksi
-        for (int layerNum = this.m_layer.length - 1; layerNum > 0; layerNum--) {
-            for (int n = 0; n < this.m_layer[layerNum].neuron.length - 1; n++) {
-                double galat = this.m_layer[layerNum].neuron[n].getGalat();
+        //update bobot koneksi atau weight
+        for (int layerNum = this.layers.length - 1; layerNum > 0; layerNum--) {
+            Layer layer = this.layers[layerNum];
+            Layer layerSebelumnya = this.layers[layerNum - 1];
 
-                for (int i = 0; i < this.m_layer[layerNum - 1].neuron.length; i++) {
-                    this.m_layer[layerNum - 1].neuron[i].updateWeight(galat, n);
-                }
-
+            for (int n = 0; n < layer.getSizeNeuron() - 1; n++) {
+                layer.getIndexNeuron(n).updateWeight(layerSebelumnya);
             }
         }
     }
 
     public void feedForward(double[] inputVal) {
-        if (this.m_layer == null || this.m_layer.length < 2) {
+        if (this.layers == null || this.layers.length < 3) {
             System.out.println("Arsitektur NN belum terbentuk dengan benar");
             return;
         }
 
-        if (inputVal.length != this.m_layer[0].neuron.length - 1) {
+        if (inputVal.length != this.layers[0].getSizeNeuron() - 1) {
             System.out.println("banyak input tidak sama dengan banyak neuron di input layer");
             return;
         }
 
         //inisialisasi input layer
         for (int i = 0; i < inputVal.length; i++) {
-            this.m_layer[0].neuron[i].setOutputVal(inputVal[i]);
+            this.layers[0].getIndexNeuron(i).setOutputVal(inputVal[i]);
         }
 
         //feed forwared propagate
-        for (int layerNum = 1; layerNum < this.m_layer.length; layerNum++) {
-            Layer layerSebelumnya = this.m_layer[layerNum - 1];
-            for (int n = 0; n < this.m_layer[layerNum].neuron.length - 1; n++) {
-                this.m_layer[layerNum].neuron[n].feedForward(layerSebelumnya);
+        for (int layerNum = 1; layerNum < this.layers.length; layerNum++) {
+            Layer layerSebelumnya = this.layers[layerNum - 1];
+            for (int n = 0; n < this.layers[layerNum].getSizeNeuron() - 1; n++) {
+                this.layers[layerNum].getIndexNeuron(n).feedForward(layerSebelumnya);
             }
         }
     }
 
     public double getError() {
-        return this.m_error;
+        return this.myError;
     }
 
     public double[] getHasil() {
-        int outputNum = this.m_layer[this.m_layer.length - 1].neuron.length - 1;
+        int outputNum = this.layers[this.layers.length - 1].getSizeNeuron() - 1;
         double[] hasil = new double[outputNum];
         for (int i = 0; i < outputNum; i++) {
             hasil[i] = 0;
-            hasil[i] = this.m_layer[this.m_layer.length - 1].neuron[i].getOutputVal();
+            hasil[i] = this.layers[this.layers.length - 1].getIndexNeuron(i).getOutputVal();
 
         }
         return hasil;
